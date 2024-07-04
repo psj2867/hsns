@@ -1,0 +1,3 @@
+[build]
+cmd = "go run ."
+exclude_dir = [".git","tmp]
