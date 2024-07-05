@@ -1,10 +1,8 @@
 package main
 
-import "github.com/psj2867/hsns/config"
+import "github.com/psj2867/hsns/router"
 
 func main() {
-	r := config.InitServer()
-	if err := r.Run(":8080"); err != nil {
-		return
-	}
+	s := router.InitServer()
+	s.Run(":8080")
 }

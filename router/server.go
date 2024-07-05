@@ -1,4 +1,4 @@
-package config
+package router
 
 import (
 	"github.com/gin-gonic/gin"
@@ -6,5 +6,6 @@ import (
 
 func InitServer() *gin.Engine {
 	r := gin.Default()
+	SetRouter(r)
 	return r
 }
