@@ -8,7 +8,7 @@ import (
 
 type user struct{}
 
-func (u user) setUserRouter(group *gin.RouterGroup) {
+func (u user) setRouter(group *gin.RouterGroup) {
 	group.GET("/login", u.login)
 	group.GET("/signup", u.signup)
 }
@@ -17,7 +17,7 @@ type loginRequest struct {
 	Token int `form:"token" binding:"required"`
 }
 
-func (u user) login(c *gin.Context) {
+func (u *user) login(c *gin.Context) {
 	req := loginRequest{}
 	if err := c.Bind(&req); err != nil {
 		return
@@ -36,7 +36,7 @@ type signupRequest struct {
 	Fullname null.String `form:"fullname"  binding:"-"`
 }
 
-func (u user) signup(c *gin.Context) {
+func (u *user) signup(c *gin.Context) {
 	req := signupRequest{}
 	if err := c.Bind(&req); err != nil {
 		return

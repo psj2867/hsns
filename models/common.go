@@ -3,39 +3,50 @@ package models
 import (
 	"database/sql"
 
-	"github.com/doug-martin/goqu/v9"
 	"github.com/psj2867/hsns/config"
 )
+
+type sqlxDb interface {
+	Get(dest interface{}, query string, args ...interface{}) error
+	Select(dest interface{}, query string, args ...interface{}) error
+	Exec(query string, args ...any) (sql.Result, error)
+}
 
 type goquSql interface {
 	ToSQL() (sql string, params []interface{}, err error)
 }
 
-type goquStrcutAbsModel[T any] struct{}
+func getDb(dbs []sqlxDb) sqlxDb {
+	if len(dbs) == 0 {
+		return config.GetDb()
+	} else {
+		return dbs[1]
+	}
 
-func GetQ[T any](t *T, sb *goqu.SelectDataset) error {
+}
+func GetQ[T any](t *T, sb goquSql, dbs ...sqlxDb) error {
 	sql, args, err := sb.ToSQL()
 	if err != nil {
 		return err
 	}
 	config.Logger.Sugar().Debugf("sql: %s, args: %v", sql, args)
-	return config.GetDb().Get(t, sql, args...)
+	return getDb(dbs).Get(t, sql, args...)
 }
-func SelectQ[T any](t *T, sb *goqu.SelectDataset) error {
+func SelectQ[T any](t *T, sb goquSql, dbs ...sqlxDb) error {
 	sql, args, err := sb.ToSQL()
 	if err != nil {
 		return err
 	}
 	config.Logger.Sugar().Debugf("sql: %s, args: %v", sql, args)
-	return config.GetDb().Select(t, sql, args...)
+	return getDb(dbs).Select(t, sql, args...)
 }
-func ExecQ[T any](t *T, sb goquSql) (sql.Result, error) {
+func ExecQ[T any](t *T, sb goquSql, dbs ...sqlxDb) (sql.Result, error) {
 	sql, args, err := sb.ToSQL()
 	if err != nil {
 		return nil, err
 	}
 	config.Logger.Sugar().Debugf("sql: %s, args: %v", sql, args)
-	return config.GetDb().Exec(sql, args...)
+	return getDb(dbs).Exec(sql, args...)
 }
 
 func Refresh(t *int64, r sql.Result) error {

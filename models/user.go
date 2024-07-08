@@ -3,14 +3,15 @@ package models
 import (
 	"github.com/doug-martin/goqu/v9"
 	"github.com/guregu/null/v5"
+	"github.com/jmoiron/sqlx"
 )
 
 const (
-	table     = "user"
-	cAll      = "*"
-	cId       = "id"
-	cName     = "name"
-	cFullName = "fullname"
+	userTable     = "user"
+	userCAll      = "*"
+	userCId       = "id"
+	userCName     = "name"
+	userCFullName = "fullname"
 )
 
 type User struct {
@@ -20,19 +21,18 @@ type User struct {
 }
 
 func (u *User) Get(id int) error {
-
-	sb := goqu.From(table).
-		Select(cAll).
+	sb := goqu.From(userTable).
+		Select(userCAll).
 		Where(goqu.Ex{
-			cId: id,
+			userCId: id,
 		})
 	return GetQ(u, sb)
 }
 
 func (u *User) Add() error {
-	sb := goqu.From(table).
+	sb := goqu.From(userTable).
 		Insert().
-		Cols(cName, cFullName).
+		Cols(userCName, userCFullName).
 		Vals(goqu.Vals{u.Name, u.Fullname})
 	r, err := ExecQ(u, sb)
 	if err != nil {
@@ -43,10 +43,10 @@ func (u *User) Add() error {
 }
 
 func (u *User) Remove() error {
-	sb := goqu.From(table).
+	sb := goqu.From(userTable).
 		Delete().
 		Where(goqu.Ex{
-			cId: u.Id,
+			userCId: u.Id,
 		})
 	_, err := ExecQ(u, sb)
 	return err
@@ -54,8 +54,17 @@ func (u *User) Remove() error {
 
 type Users []User
 
+func (u Users) GetDb() *sqlx.DB {
+	return nil
+}
+
 func (u *Users) All() error {
-	sb := goqu.From(table).
-		Select(cAll)
+	sb := goqu.From(userTable).
+		Select(userCAll)
 	return SelectQ(u, sb)
+}
+func (u *Users) AllT(tx *sqlx.Tx) error {
+	sb := goqu.From(userTable).
+		Select(userCAll)
+	return SelectQ(u, sb, tx)
 }
