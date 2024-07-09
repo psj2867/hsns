@@ -7,6 +7,7 @@ import (
 
 func InitServer() *gin.Engine {
 	r := gin.Default()
+	r.Use(globalAuthMiddleware())
 	router.SetRouter(r)
 	return r
 }
