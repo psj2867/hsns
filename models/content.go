@@ -1,36 +1,45 @@
 package models
 
 import (
-	"time"
-
-	"github.com/guregu/null/v5"
+	"github.com/doug-martin/goqu/v9"
+	"github.com/jmoiron/sqlx"
 )
 
-// const (
-// 	contentTable     = "content"
-// 	contentCAll      = "*"
-// 	contentCId       = "id"
-// 	contentCName     = "name"
-// 	contentCFullName = "fullname"
-// )
+const (
+	cContentTable    = "content"
+	cContentUploaded = "uploaded"
+)
 
 type Content struct {
-	Id       int64
-	Content  null.String
-	Uuid     string
-	CreateAt time.Time
+	ContentRequest
 	Uploaded bool
-	Images   []Image
-}
-type Image struct {
-	Id        int64
-	ContentId int64
-	Uuid      string
 }
 
-func NewContent() Content {
+func FromRequestToContent(request ContentRequest) Content {
 	return Content{
-		CreateAt: time.Now(),
-		Uploaded: false,
+		ContentRequest: request,
+		Uploaded:       true,
 	}
+}
+func (u *Content) toRecord() goqu.Record {
+	return goqu.Record{
+		cContentRequestCUserId:   u.UserId,
+		cContentRequestCContent:  u.Content,
+		cContentRequestCUuid:     u.Uuid,
+		cContentRequestCCreateAt: u.CreateAt,
+		cContentUploaded:         u.Uploaded,
+	}
+}
+
+func (u *Content) AddT(tx *sqlx.Tx) error {
+	sb := from(cContentTable).
+		Insert().
+		Rows(
+			u.toRecord(),
+		)
+	return AddQ(u, sb, &u.Id, tx)
+}
+
+func (u *Content) AddImagesT(images Images, tx *sqlx.Tx) error {
+	return images.AddT(tx)
 }
