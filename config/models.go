@@ -12,11 +12,13 @@ func from(table string) *sqlbuilder.CreateTableBuilder {
 }
 
 var dialects = map[string]map[string]string{
-	"ramsql": map[string]string{
-		"primary": " INT PRIMARY KEY AUTOINCREMENT ",
+	"ramsql": {
+		"primary":   " INT PRIMARY KEY AUTOINCREMENT ",
+		"type_date": " date ",
 	},
-	"sqlite": map[string]string{
-		"primary": " INTEGER PRIMARY KEY AUTOINCREMENT ",
+	"sqlite": {
+		"primary":   " INTEGER PRIMARY KEY AUTOINCREMENT ",
+		"type_date": " DATETIME ",
 	},
 }
 
@@ -34,24 +36,26 @@ func CreateUserSql(driver string) string {
 		String()
 }
 func commonContentSql(driver string) *sqlbuilder.CreateTableBuilder {
-	return from("content_request").IfNotExists().
+	return from("").IfNotExists().
 		Define("id" + getPrimaryConstant(driver)).
 		Define("user_id INT NOT NULL").
 		Define("content VARCHAR NOT NULL").
 		Define("uuid VARCHAR NOT NULL").
-		Define("create_at DATETIME NOT NULL")
+		Define(fmt.Sprintf("create_at %s NOT NULL", dialects[driver]["type_date"]))
+
 }
 func CreateContentSql(driver string) string {
-	return commonContentSql(driver).String()
+	return commonContentSql(driver).CreateTable("content").
+		Define("uploaded BOOLEAN NOT NULL").
+		String()
 }
 func CreateContentRquestSql(driver string) string {
-	return commonContentSql(driver).
-		Define("uploaded BOOLEAN NOT NULL").
+	return commonContentSql(driver).CreateTable("content_request").
 		String()
 }
 
 func CreateImageSql(driver string) string {
-	return from("content_request").IfNotExists().
+	return from("image").IfNotExists().
 		Define("id" + getPrimaryConstant(driver)).
 		Define("content_id INT NOT NULL").
 		Define("uuid VARCHAR NOT NULL").

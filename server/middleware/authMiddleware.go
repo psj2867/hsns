@@ -6,12 +6,15 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
-
-	"github.com/psj2867/hsns/config"
-	"github.com/psj2867/hsns/models"
 )
 
 const Auth_Header = "Authorization"
+const TokenKey_UserId = "userid"
+
+const (
+	MiddlewareJwtUser   = "server/middleware/user"
+	MiddlewareJwtUserId = "server/middleware/userId"
+)
 
 type AuthUserType = map[string]any
 
@@ -28,10 +31,10 @@ func GlobalAuthMiddleware() gin.HandlerFunc {
 			return
 		}
 		if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-			c.Set(config.JwtUser, AuthUserType(claims))
+			c.Set(MiddlewareJwtUser, AuthUserType(claims))
 			c.Next()
 		} else {
-			c.Set(config.JwtUser, AuthUserType{})
+			c.Set(MiddlewareJwtUser, AuthUserType{})
 			errorHandle(c, http.StatusUnauthorized, gin.H{"error": "Invalid token"})
 		}
 	}
@@ -49,15 +52,27 @@ func getSecretKey() []byte {
 func secretKey(token *jwt.Token) (interface{}, error) {
 	return getSecretKey(), nil
 }
+func GetAuthUserId(c *gin.Context) (string, bool) {
+	a, ok := GetAuthInfoByKey(c, TokenKey_UserId)
+	if !ok {
+		return "", false
+	}
+	b, ok := a.(string)
+	if !ok {
+		return "", false
+	}
+	return b, true
+
+}
 func GetAuthInfo(c *gin.Context) (AuthUserType, bool) {
-	a, ok := c.Get(config.JwtUser)
+	a, ok := c.Get(MiddlewareJwtUser)
 	if !ok {
 		return nil, false
 	}
 	return a.(AuthUserType), true
 }
 func GetAuthInfoByKey(c *gin.Context, key string) (any, bool) {
-	claims, ok := c.Get(config.JwtUser)
+	claims, ok := c.Get(MiddlewareJwtUser)
 	if !ok {
 		return nil, false
 	}
@@ -79,8 +94,18 @@ func HasAuth(c *gin.Context) bool {
 	return ok
 }
 
-func generateToken(values map[string]any) (string, error) {
-	accessTokenClaims := jwt.MapClaims(values)
+type UserInfoForToken struct {
+	UserId string
+	values map[string]any
+}
+
+func GenerateToken(userInfo UserInfoForToken, options ...func(UserInfoForToken)) (string, error) {
+	userInfo.values = map[string]any{}
+	for _, v := range options {
+		v(userInfo)
+	}
+	accessTokenClaims := jwt.MapClaims(userInfo.values)
+	accessTokenClaims[TokenKey_UserId] = userInfo.UserId
 	accessTokenClaims["iat"] = time.Now().Unix()
 	accessTokenClaims["exp"] = time.Now().Add(time.Hour * 24).Unix()
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, accessTokenClaims)
@@ -89,10 +114,4 @@ func generateToken(values map[string]any) (string, error) {
 		return "", err
 	}
 	return accessToken, nil
-}
-
-func GenerateToken(user *models.User) (string, error) {
-	return generateToken(map[string]any{
-		"userId": user.UserId,
-	})
 }

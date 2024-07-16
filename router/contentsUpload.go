@@ -3,7 +3,6 @@ package router
 import (
 	"context"
 	"database/sql"
-	"encoding/base64"
 	"encoding/json"
 	"time"
 
@@ -11,7 +10,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/psj2867/hsns/config"
 	"github.com/psj2867/hsns/models"
-	"github.com/psj2867/hsns/server/middleware"
 )
 
 type uploadRequest struct {
@@ -28,17 +26,19 @@ func (t *uploadRequest) toContentRequest(userId int64) *models.ContentRequest {
 }
 
 func (t *contents) upload(c *gin.Context) {
-	userId := middleware.MustGetAuthInfoByKey(c, "userId").(string)
-	user := models.User{}
-	user.GetByUserId(userId)
+	user := models.GetUserInfoInContext(c)
 	var ur uploadRequest
 	c.Bind(&ur)
 	contentsReuqest := ur.toContentRequest(user.Id)
+	if err := contentsReuqest.Add(); err != nil {
+		c.JSON(403, err.Error())
+		return
+	}
 	uploadToken := t.createUploadToken(contentsReuqest).String()
 	c.JSON(200, uploadToken)
 }
 func (t *contents) createUploadToken(cr *models.ContentRequest) *uploadToken {
-	var m uploadToken
+	m := uploadToken{data: map[string]interface{}{}}
 	m.data["user"] = cr.UserId
 	m.data["CreateAt"] = cr.CreateAt
 	return &m
@@ -80,9 +80,13 @@ type uploadToken struct {
 }
 
 func (t *uploadToken) String() string {
-	jr, _ := json.Marshal(t)
-	bEnc := base64.StdEncoding.EncodeToString(jr)
-	return bEnc
+	jr, _ := json.Marshal(t.data)
+	encoded := t.encode(jr)
+	return encoded
+}
+func (t *uploadToken) encode(data []byte) string {
+	bEnc, _ := config.UploadTokenEnDecoder{}.Encode(data)
+	return string(bEnc)
 }
 
 type returnToken struct {
@@ -90,6 +94,7 @@ type returnToken struct {
 }
 
 func parseReturnToekn(token string) *returnToken {
+	decoded, _ := config.ReturnTokenEnDecoder{}.Decode([]byte(token))
 	var r returnToken
 	_ = token
 	// TODO

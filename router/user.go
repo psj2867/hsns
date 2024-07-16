@@ -29,7 +29,7 @@ func (u *userRouter) login(c *gin.Context) {
 		c.JSON(403, err.Error())
 		return
 	}
-	token, err := middleware.GenerateToken(&user)
+	token, err := generateToken(&user)
 	if err != nil {
 		c.JSON(403, err.Error())
 		return
@@ -37,6 +37,12 @@ func (u *userRouter) login(c *gin.Context) {
 	c.JSON(200, map[string]interface{}{
 		"token":  token,
 		"userId": user.Id,
+	})
+}
+
+func generateToken(user *models.User) (string, error) {
+	return middleware.GenerateToken(middleware.UserInfoForToken{
+		UserId: user.UserId,
 	})
 }
 

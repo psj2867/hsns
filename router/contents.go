@@ -12,7 +12,7 @@ func (t contents) setRouter(group *gin.RouterGroup) {
 	uploadGroup := group.Group("/upload", middleware.ShouldAuthUnauth())
 	{
 		uploadGroup.POST("", t.upload)
-		uploadGroup.GET("/success", t.uploadSuccess)
+		uploadGroup.POST("/success", t.uploadSuccess)
 		uploadGroup.GET("/fail", t.uploadFail)
 	}
 }

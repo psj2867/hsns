@@ -17,7 +17,9 @@ func TestCreateToken(t *testing.T) {
 		Name:   "asdf",
 		UserId: userid,
 	}
-	token, err := middleware.GenerateToken(&user)
+	token, err := middleware.GenerateToken(middleware.UserInfoForToken{
+		UserId: user.UserId,
+	})
 	if err != nil {
 		t.Error(err)
 		return
@@ -31,7 +33,9 @@ func TestVerifyToken(t *testing.T) {
 		Name:   "asdf",
 		UserId: userid,
 	}
-	token, err := middleware.GenerateToken(&user)
+	token, err := middleware.GenerateToken(middleware.UserInfoForToken{
+		UserId: user.UserId,
+	})
 	if err != nil {
 		t.Error(err)
 		return
@@ -51,7 +55,9 @@ func TestVerifyToken_time_fail(t *testing.T) {
 		Name:   "asdf",
 		UserId: userid,
 	}
-	token, err := middleware.GenerateToken(&user)
+	token, err := middleware.GenerateToken(middleware.UserInfoForToken{
+		UserId: user.UserId,
+	})
 	if err != nil {
 		t.Error(err)
 		return

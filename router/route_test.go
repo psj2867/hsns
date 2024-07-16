@@ -18,9 +18,12 @@ import (
 
 var s *gin.Engine
 
+const testUser = "testGlobalUser"
+
 func TestMain(m *testing.M) {
-	config.SetTestDb()
+	config.SetTestDb("ramsql", "test")
 	s = server.InitServer()
+	routeUserSignup(testUser)
 	gin.SetMode("test")
 	defer server.DeferServer(s)
 	os.Exit(m.Run())
@@ -30,7 +33,6 @@ func TestRoute(t *testing.T) {
 	w, req := util.HttptestGet("/", nil)
 	s.ServeHTTP(w, req)
 	fmt.Printf("w: %v\n", w)
-	// assert.Equal(t, 1, 1)
 }
 
 func routeUserSignup(userId string) *httptest.ResponseRecorder {
@@ -40,6 +42,13 @@ func routeUserSignup(userId string) *httptest.ResponseRecorder {
 	})
 	s.ServeHTTP(w, req)
 	return w
+}
+func routeLogin(userId string) (map[string]any, error) {
+	w, req := util.HttptestGet("/user/login", map[string]string{
+		"id": userId,
+	})
+	s.ServeHTTP(w, req)
+	return toJson(w)
 }
 func TestRouteUserSignup(t *testing.T) {
 	w := routeUserSignup("TestRouteUserSignup")
@@ -68,14 +77,12 @@ func TestRouteUserAuthMiddleware(t *testing.T) {
 	}
 
 	res, err := toJson(w)
-	if err != nil {
-		t.Error(err)
+	if assert.NoError(t, err) {
 		return
 	}
 	token := res["token"].(string)
 	user, err := routeUserMe(token)
-	if err != nil {
-		t.Error(err)
+	if assert.NoError(t, err) {
 		return
 	}
 	fmt.Printf("user: %v\n", user)

@@ -8,7 +8,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	config.SetTestDb()
+	config.SetTestDb("ramsql", "test")
 	defer config.DeferDb()
 	os.Exit(m.Run())
 }

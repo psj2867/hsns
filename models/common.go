@@ -17,7 +17,7 @@ const (
 var goqud = config.Goqu()
 
 func from(table string) *goqu.SelectDataset {
-	return goqud.From(table).Prepared(true)
+	return goqud.From(table)
 }
 
 type sqlxDb interface {
