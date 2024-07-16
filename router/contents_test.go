@@ -42,28 +42,63 @@ func TestRouteContentUploadSuccess(t *testing.T) {
 	// upload request
 	res, req := util.HttptestPost("/contents/upload", map[string]string{
 		"content": "asdf",
+		"images":  "3",
 	})
 	req.Header.Add(middleware.Auth_Header, loginUser["token"].(string))
 	s.ServeHTTP(res, req)
 	assert.Equal(t, 200, res.Result().StatusCode, res.Body.String())
 	// mock of upload image server
-	returnToken := mockImageUpload(res.Body.String())
+	uploadToken := res.Body.String()
+	returnToken := mockImageUpload(uploadToken)
 	// submit image upload success
 	res, req = util.HttptestPost("/contents/upload/success", map[string]string{
-		"id":    "1",
 		"token": returnToken,
 	})
 	req.Header.Add(middleware.Auth_Header, loginUser["token"].(string))
 	s.ServeHTTP(res, req)
 	assert.Equal(t, 200, res.Result().StatusCode, res.Body.String())
-
 }
 func mockImageUpload(res string) string {
-	decoded, _ := config.UploadTokenEnDecoder{}.Decode([]byte(res))
-	fmt.Printf("decoded: %v\n", decoded)
-	docodedRes := map[string]string{}
-	json.Unmarshal(decoded, &docodedRes)
-	fmt.Printf("docodedRes: %v\n", docodedRes)
+	decoded, err := config.UploadTokenEnDecoder.Decode([]byte(res))
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("decoded: %v\n", string(decoded))
+	uploadTokenData := map[string]any{}
+	if err := json.Unmarshal(decoded, &uploadTokenData); err != nil {
+		panic(err)
+	}
+	fmt.Printf("docodedRes: %v\n", uploadTokenData)
+	jsonB, _ := json.Marshal(map[string]any{
+		"uuid":           uploadTokenData["uuid"],
+		"requestImages":  uploadTokenData["images"],
+		"uploadedImages": uploadTokenData["images"],
+	})
+	r, _ := config.ReturnTokenEnDecoder.Encode(jsonB)
+	return string(r)
+}
 
-	return ""
+func TestRouteContentUploadFail(t *testing.T) {
+	// login
+	loginUser, err := routeLogin(testUser)
+	if !assert.NoError(t, err) {
+		return
+	}
+	// upload request
+	res, req := util.HttptestPost("/contents/upload", map[string]string{
+		"content": "asdf",
+		"images":  "3",
+	})
+	req.Header.Add(middleware.Auth_Header, loginUser["token"].(string))
+	s.ServeHTTP(res, req)
+	assert.Equal(t, 200, res.Result().StatusCode, res.Body.String())
+	// mock of upload image server
+	uploadToken := res.Body.String()
+	// submit image upload success
+	res, req = util.HttptestPost("/contents/upload/success", map[string]string{
+		"token": uploadToken,
+	})
+	req.Header.Add(middleware.Auth_Header, loginUser["token"].(string))
+	s.ServeHTTP(res, req)
+	assert.Equal(t, 200, res.Result().StatusCode, res.Body.String())
 }

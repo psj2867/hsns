@@ -10,10 +10,13 @@ import (
 	"github.com/google/uuid"
 	"github.com/psj2867/hsns/config"
 	"github.com/psj2867/hsns/models"
+	"github.com/psj2867/hsns/util"
+	"github.com/sa-/slicefunk"
 )
 
 type uploadRequest struct {
 	Content string `form:"content" binding:"required"`
+	Images  int    `form:"images" binding:"-"`
 }
 
 func (t *uploadRequest) toContentRequest(userId int64) *models.ContentRequest {
@@ -26,84 +29,139 @@ func (t *uploadRequest) toContentRequest(userId int64) *models.ContentRequest {
 }
 
 func (t *contents) upload(c *gin.Context) {
-	user := models.GetUserInfoInContext(c)
 	var ur uploadRequest
-	c.Bind(&ur)
+	if err := c.Bind(&ur); err != nil {
+		c.JSON(400, err.Error())
+		return
+	}
+
+	user := models.GetUserInfoInContext(c)
 	contentsReuqest := ur.toContentRequest(user.Id)
 	if err := contentsReuqest.Add(); err != nil {
 		c.JSON(403, err.Error())
 		return
 	}
-	uploadToken := t.createUploadToken(contentsReuqest).String()
-	c.JSON(200, uploadToken)
+
+	uploadToken := createUploadToken(contentsReuqest, &ur).String()
+	c.Status(200)
+	c.Writer.WriteString(uploadToken)
 }
-func (t *contents) createUploadToken(cr *models.ContentRequest) *uploadToken {
-	m := uploadToken{data: map[string]interface{}{}}
-	m.data["user"] = cr.UserId
-	m.data["CreateAt"] = cr.CreateAt
-	return &m
+func gerateImageUuid() string {
+	return uuid.New().String()
 }
 
-type uploadSuccessRequest struct {
+type uploadTokenRequest struct {
 	Token string `form:"token"`
 }
 
 func (t *contents) uploadSuccess(c *gin.Context) {
 
-	var request uploadSuccessRequest
+	var request uploadTokenRequest
 	if err := c.Bind(&request); err != nil {
 		return
 	}
 	token := request.Token
-	returnToken := parseReturnToekn(token)
-	returnToken.shouldHave()
+	returnToken := parseReturnToken(token)
 	// start tx
 	tx, _ := config.GetDb().BeginTxx(context.Background(), &sql.TxOptions{})
 	defer tx.Commit()
 
 	var contentRequest models.ContentRequest
-	contentRequest.GetT(returnToken.get("").(int64), tx)
+	contentRequest.GetByUuidT(returnToken.Uuid, tx)
 	contentRequest.RemoveT(tx)
 
 	content := models.FromRequestToContent(contentRequest)
 	content.AddT(tx)
-	content.AddImagesT(returnToken.get("images").(models.Images), tx)
+	content.AddImagesT(returnToken.getImages(), tx)
 }
 
 func (t *contents) uploadFail(c *gin.Context) {
-	// 토큰 확인
-	// 삭제
+	var request uploadTokenRequest
+	if err := c.Bind(&request); err != nil {
+		return
+	}
+	token := request.Token
+	parsedToken := uploadToken{}
+	parsedToken.parse(token)
+	contentRequest := models.ContentRequest{Uuid: parsedToken.getUuid()}
+	contentRequest.RemoveByUuid()
+}
+func IterateItems(yield func(int) bool) {
+	items := []int{1, 2, 3}
+	for _, v := range items {
+		if !yield(v) {
+			return
+		}
+	}
 }
 
 type uploadToken struct {
-	data map[string]interface{}
+	data   map[string]interface{}
+	images []string
+}
+
+func createUploadToken(cr *models.ContentRequest, req *uploadRequest) *uploadToken {
+	m := uploadToken{data: map[string]interface{}{}}
+	m.images = util.GenerateN(gerateImageUuid, req.Images)
+	m.data["createAt"] = cr.CreateAt
+	m.data["uuid"] = cr.Uuid
+	m.data["images"] = m.images
+	return &m
 }
 
 func (t *uploadToken) String() string {
 	jr, _ := json.Marshal(t.data)
-	encoded := t.encode(jr)
-	return encoded
+	encoded, _ := config.UploadTokenEnDecoder.Encode(jr)
+	return string(encoded)
 }
-func (t *uploadToken) encode(data []byte) string {
-	bEnc, _ := config.UploadTokenEnDecoder{}.Encode(data)
-	return string(bEnc)
+func (t *uploadToken) parse(data string) error {
+	decodedData, _ := config.UploadTokenEnDecoder.Decode([]byte(data))
+	err := json.Unmarshal(decodedData, &t.data)
+	if err != nil {
+		return err
+	}
+	t.images = t.data["images"].([]string)
+	_ = t.data["uuid"].(string)
+	return nil
+}
+func (t *uploadToken) getUuid() string {
+	uuid := t.data["uuid"]
+	if uuid == nil {
+		return ""
+	}
+	return uuid.(string)
 }
 
 type returnToken struct {
-	data map[string]interface{}
+	Uuid           string   `json:"uuid"`
+	RequestImages  []string `json:"requestImages"`
+	UploadedImages []string `json:"uploadedImages"`
 }
 
-func parseReturnToekn(token string) *returnToken {
-	decoded, _ := config.ReturnTokenEnDecoder{}.Decode([]byte(token))
+func (t *returnToken) getImages() models.Images {
+	return slicefunk.Map(t.UploadedImages, func(uuid string) models.Image {
+		return models.Image{
+			Uuid: uuid,
+		}
+	})
+}
+
+func parseReturnToken(token string) *returnToken {
+	decoded, _ := config.ReturnTokenEnDecoder.Decode([]byte(token))
 	var r returnToken
-	_ = token
-	// TODO
+	err := json.Unmarshal(decoded, &r)
+	if err != nil {
+		return nil
+	}
 	return &r
 }
-func (t *returnToken) shouldHave(keys ...string) error {
-	return nil
-}
-func (t *returnToken) get(key string) interface{} {
-	v, _ := t.data[key]
-	return v
+func MergeTokens(tokens ...*returnToken) *returnToken {
+	if len(tokens) == 0 {
+		return nil
+	}
+	base := tokens[0]
+	base.UploadedImages = util.FlatMap(tokens, func(t *returnToken) []string {
+		return t.UploadedImages
+	})
+	return base
 }

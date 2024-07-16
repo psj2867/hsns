@@ -25,33 +25,40 @@ type ContentRequest struct {
 }
 
 func (u *ContentRequest) Get(id int64) error {
-	return WrapGet(u, id,
-		func(wgo *wrapSqlOptions) { wgo.tableName = cContentRequestTable },
+	return wrapGet(u, id, withTable(cContentRequestTable))
+}
+func (u *ContentRequest) GetByUuid(uuid string) error {
+	return wrapGet(u, uuid, withTable(cContentRequestTable),
+		func(wgo *wrapSqlOptions) { wgo.idName = cContentRequestCUuid },
 	)
 }
-func (u *ContentRequest) GetT(id int64, tx *sqlx.Tx) error {
-	return WrapGet(u, id,
-		func(wgo *wrapSqlOptions) { wgo.tableName = cContentRequestTable },
-		func(wgo *wrapSqlOptions) { wgo.tx = tx },
+func (u *ContentRequest) GetByUuidT(uuid string, tx *sqlx.Tx) error {
+	return wrapGet(u, uuid, withTable(cContentRequestTable), withTx(tx),
+		func(wgo *wrapSqlOptions) { wgo.idName = cContentRequestCUuid },
 	)
 }
 
 func (u *ContentRequest) Add() error {
 	sb := from(cContentRequestTable).
 		Insert().
-		Rows(
-			goqu.Record{
-				cContentRequestCUserId:   u.UserId,
-				cContentRequestCContent:  u.Content,
-				cContentRequestCUuid:     u.Uuid,
-				cContentRequestCCreateAt: u.CreateAt,
-			},
-		)
-	return AddQ(u, sb, &u.Id)
+		Rows(u.ToRecord())
+	return AddQ(sb, &u.Id)
 }
-func (u *ContentRequest) RemoveT(tx *sqlx.Tx) error {
-	return WrapRemove(u, u.Id,
-		func(wgo *wrapSqlOptions) { wgo.tableName = cContentRequestTable },
-		func(wgo *wrapSqlOptions) { wgo.tx = tx },
+
+func (u *ContentRequest) ToRecord() *goqu.Record {
+	return &goqu.Record{
+		cContentRequestCUserId:   u.UserId,
+		cContentRequestCContent:  u.Content,
+		cContentRequestCUuid:     u.Uuid,
+		cContentRequestCCreateAt: u.CreateAt,
+	}
+}
+func (u *ContentRequest) RemoveByUuid() error {
+	return wrapRemove(u.Uuid, withTable(cContentRequestTable),
+		func(wgo *wrapSqlOptions) { wgo.idName = cContentRequestCUuid },
 	)
+}
+
+func (u *ContentRequest) RemoveT(tx *sqlx.Tx) error {
+	return wrapRemove(u.Id, withTable(cContentRequestTable), withTx(tx))
 }

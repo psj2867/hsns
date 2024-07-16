@@ -34,7 +34,7 @@ func getDb(dbs []sqlxDb) sqlxDb {
 	if len(dbs) == 0 {
 		return config.GetDb()
 	} else {
-		return dbs[1]
+		return dbs[0]
 	}
 
 }
@@ -62,7 +62,7 @@ func ExecQ(sb goquSql, dbs ...sqlxDb) (sql.Result, error) {
 	config.Logger.Sugar().Debugf("sql: %s, args: %v", sql, args)
 	return getDb(dbs).Exec(sql, args...)
 }
-func AddQ[T any](t *T, sb goquSql, id *int64, dbs ...sqlxDb) error {
+func AddQ(sb goquSql, id *int64, dbs ...sqlxDb) error {
 	r, err := ExecQ(sb)
 	if err != nil {
 		return err
@@ -87,7 +87,7 @@ type wrapSqlOptions struct {
 	tx        *sqlx.Tx
 }
 
-func defAndSet(options []WrapSqlOptionF) *wrapSqlOptions {
+func defAndSet(options []wrapSqlOptionF) *wrapSqlOptions {
 	var w wrapSqlOptions
 	w.idName = "id"
 	w.tableName = ""
@@ -98,9 +98,14 @@ func defAndSet(options []WrapSqlOptionF) *wrapSqlOptions {
 	return &w
 }
 
-type WrapSqlOptionF func(*wrapSqlOptions)
+type wrapSqlOptionF func(*wrapSqlOptions)
 
-func WrapGet[T any](t *T, id any, options ...WrapSqlOptionF) error {
+func withTx(tx *sqlx.Tx) wrapSqlOptionF { return func(wso *wrapSqlOptions) { wso.tx = tx } }
+func withTable(table string) wrapSqlOptionF {
+	return func(wso *wrapSqlOptions) { wso.tableName = table }
+}
+
+func wrapGet[T any](t *T, id any, options ...wrapSqlOptionF) error {
 	get := defAndSet(options)
 	sb := from(get.tableName).
 		Select(get.columns).
@@ -111,11 +116,15 @@ func WrapGet[T any](t *T, id any, options ...WrapSqlOptionF) error {
 	return GetQ(t, sb)
 }
 
-func WrapRemove[T any](t *T, id int64, options ...WrapSqlOptionF) error {
+func wrapRemove(id any, options ...wrapSqlOptionF) error {
 	get := defAndSet(options)
 	sb := from(get.tableName).
 		Delete().
 		Where(goqu.C(get.idName).Eq(id))
+	if get.tx != nil {
+		_, err := ExecQ(sb, get.tx)
+		return err
+	}
 	_, err := ExecQ(sb)
 	return err
 }

@@ -19,3 +19,9 @@ func InitServer() *gin.Engine {
 func DeferServer(r *gin.Engine) {
 	config.DeferDb()
 }
+
+func Run(addr ...string) {
+	s := InitServer()
+	defer DeferServer(s)
+	s.Run(addr...)
+}

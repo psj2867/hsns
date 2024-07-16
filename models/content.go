@@ -1,7 +1,6 @@
 package models
 
 import (
-	"github.com/doug-martin/goqu/v9"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -12,34 +11,24 @@ const (
 
 type Content struct {
 	ContentRequest
-	Uploaded bool
 }
 
 func FromRequestToContent(request ContentRequest) Content {
-	return Content{
-		ContentRequest: request,
-		Uploaded:       true,
-	}
-}
-func (u *Content) toRecord() goqu.Record {
-	return goqu.Record{
-		cContentRequestCUserId:   u.UserId,
-		cContentRequestCContent:  u.Content,
-		cContentRequestCUuid:     u.Uuid,
-		cContentRequestCCreateAt: u.CreateAt,
-		cContentUploaded:         u.Uploaded,
-	}
+	return Content{request}
 }
 
 func (u *Content) AddT(tx *sqlx.Tx) error {
 	sb := from(cContentTable).
 		Insert().
 		Rows(
-			u.toRecord(),
+			u.ToRecord(),
 		)
-	return AddQ(u, sb, &u.Id, tx)
+	return AddQ(sb, &u.Id, tx)
 }
 
 func (u *Content) AddImagesT(images Images, tx *sqlx.Tx) error {
+	for _, v := range images {
+		v.ContentId = u.Id
+	}
 	return images.AddT(tx)
 }

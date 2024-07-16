@@ -12,7 +12,9 @@ require (
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/proullon/ramsql v0.1.3
 	github.com/sa-/slicefunk v0.1.4
+	github.com/stoewer/go-strcase v1.3.0
 	github.com/stretchr/testify v1.9.0
+	github.com/thoas/go-funk v0.9.3
 	go.uber.org/zap v1.27.0
 	modernc.org/sqlite v1.30.1
 )
@@ -43,7 +45,6 @@ require (
 	github.com/pelletier/go-toml/v2 v2.2.2 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
-	github.com/stoewer/go-strcase v1.3.0 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.12 // indirect
 	go.uber.org/multierr v1.10.0 // indirect

@@ -24,13 +24,10 @@ type User struct {
 }
 
 func (u *User) Get(id int64) error {
-	return WrapGet(u, id,
-		func(wgo *wrapSqlOptions) { wgo.tableName = cUserTable },
-	)
+	return wrapGet(u, id, withTable(cUserTable))
 }
 func (u *User) GetByUserId(userid string) error {
-	return WrapGet(u, userid,
-		func(wgo *wrapSqlOptions) { wgo.tableName = cUserTable },
+	return wrapGet(u, userid, withTable(cUserTable),
 		func(wgo *wrapSqlOptions) { wgo.idName = cUserCUserId },
 	)
 }
@@ -41,13 +38,11 @@ func (u *User) Add() error {
 		Insert().
 		Cols(cUserCName, cUserCUserId, cUserCUuid).
 		Vals(goqu.Vals{u.Name, u.UserId, u.Uuid})
-	return AddQ(u, sb, &u.Id)
+	return AddQ(sb, &u.Id)
 }
 
 func (u *User) Remove() error {
-	return WrapRemove(u, u.Id,
-		func(wgo *wrapSqlOptions) { wgo.tableName = cUserTable },
-	)
+	return wrapRemove(u.Id, withTable(cUserTable))
 }
 
 type Users []User

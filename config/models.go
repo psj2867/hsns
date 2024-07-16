@@ -46,7 +46,6 @@ func commonContentSql(driver string) *sqlbuilder.CreateTableBuilder {
 }
 func CreateContentSql(driver string) string {
 	return commonContentSql(driver).CreateTable("content").
-		Define("uploaded BOOLEAN NOT NULL").
 		String()
 }
 func CreateContentRquestSql(driver string) string {

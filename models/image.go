@@ -3,7 +3,7 @@ package models
 import (
 	"github.com/doug-martin/goqu/v9"
 	"github.com/jmoiron/sqlx"
-	"github.com/sa-/slicefunk"
+	"github.com/thoas/go-funk"
 )
 
 type Image struct {
@@ -31,7 +31,7 @@ func (t Images) AddT(tx *sqlx.Tx) error {
 	sb := from(cImageTable).
 		Insert().
 		Rows(
-			slicefunk.Map(t, func(a Image) goqu.Record {
+			funk.Map(t, func(a Image) goqu.Record {
 				return a.toRecord()
 			}),
 		)

@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/psj2867/hsns/config"
 )
 
 const Auth_Header = "Authorization"
@@ -40,16 +41,16 @@ func GlobalAuthMiddleware() gin.HandlerFunc {
 	}
 }
 func ParseJwt(tokenString string, options ...jwt.ParserOption) (*jwt.Token, error) {
-	return jwt.Parse(tokenString, secretKey, options...)
+	return jwt.Parse(tokenString, jwtParseSecretKey, options...)
 }
 func errorHandle(c *gin.Context, code int, content any) {
 	_, _ = code, content
 	c.Next()
 }
 func getSecretKey() []byte {
-	return []byte("secretkey")
+	return config.GetJwtSecretKey()
 }
-func secretKey(token *jwt.Token) (interface{}, error) {
+func jwtParseSecretKey(token *jwt.Token) (interface{}, error) {
 	return getSecretKey(), nil
 }
 func GetAuthUserId(c *gin.Context) (string, bool) {
@@ -82,13 +83,6 @@ func GetAuthInfoByKey(c *gin.Context, key string) (any, bool) {
 	}
 	return val, true
 }
-func MustGetAuthInfoByKey(c *gin.Context, key string) any {
-	val, ok := GetAuthInfoByKey(c, key)
-	if !ok {
-		panic("should use shouldAuth middleware")
-	}
-	return val
-}
 func HasAuth(c *gin.Context) bool {
 	_, ok := GetAuthInfo(c)
 	return ok
@@ -99,7 +93,7 @@ type UserInfoForToken struct {
 	values map[string]any
 }
 
-func GenerateToken(userInfo UserInfoForToken, options ...func(UserInfoForToken)) (string, error) {
+func GenerateJwtToken(userInfo UserInfoForToken, options ...func(UserInfoForToken)) (string, error) {
 	userInfo.values = map[string]any{}
 	for _, v := range options {
 		v(userInfo)

@@ -1,34 +1,44 @@
 package config
 
-import "encoding/base64"
+import (
+	"encoding/base64"
+)
 
 type EnDeocoder interface {
 	Encode([]byte) ([]byte, error)
 	Decode([]byte) ([]byte, error)
 }
 
-type UploadTokenEnDecoder struct{}
+var UploadTokenEnDecoder uploadTokenEnDecoder
 
-func (t UploadTokenEnDecoder) Encode(src []byte) ([]byte, error) {
+type uploadTokenEnDecoder struct{}
+
+func (t uploadTokenEnDecoder) Encode(src []byte) ([]byte, error) {
 	dst := make([]byte, base64.StdEncoding.EncodedLen(len(src)))
 	base64.StdEncoding.Encode(dst, src)
 	return dst, nil
 }
-func (t UploadTokenEnDecoder) Decode(src []byte) ([]byte, error) {
+func (t uploadTokenEnDecoder) Decode(src []byte) ([]byte, error) {
 	dst := make([]byte, base64.StdEncoding.DecodedLen(len(src)))
 	n, err := base64.StdEncoding.Decode(dst, []byte(src))
 	return dst[:n], err
 }
 
-type ReturnTokenEnDecoder struct{}
+var ReturnTokenEnDecoder returnTokenEnDecoder
 
-func (t ReturnTokenEnDecoder) Encode(src []byte) ([]byte, error) {
+type returnTokenEnDecoder struct{}
+
+func (t returnTokenEnDecoder) Encode(src []byte) ([]byte, error) {
 	dst := make([]byte, base64.StdEncoding.EncodedLen(len(src)))
 	base64.StdEncoding.Encode(dst, src)
 	return dst, nil
 }
-func (t ReturnTokenEnDecoder) Decode(src []byte) ([]byte, error) {
+func (t returnTokenEnDecoder) Decode(src []byte) ([]byte, error) {
 	dst := make([]byte, base64.StdEncoding.DecodedLen(len(src)))
 	n, err := base64.StdEncoding.Decode(dst, []byte(src))
 	return dst[:n], err
+}
+
+func GetJwtSecretKey() []byte {
+	return []byte("secretkey")
 }

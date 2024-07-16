@@ -23,25 +23,27 @@ func (u *userRouter) login(c *gin.Context) {
 	if err := c.Bind(&req); err != nil {
 		return
 	}
-	userId := req.UserId
+
 	user := models.User{}
-	if err := user.GetByUserId(userId); err != nil {
+	if err := user.GetByUserId(req.UserId); err != nil {
 		c.JSON(403, err.Error())
 		return
 	}
-	token, err := generateToken(&user)
+
+	token, err := generateJwtToken(&user)
 	if err != nil {
 		c.JSON(403, err.Error())
 		return
 	}
+
 	c.JSON(200, map[string]interface{}{
 		"token":  token,
 		"userId": user.Id,
 	})
 }
 
-func generateToken(user *models.User) (string, error) {
-	return middleware.GenerateToken(middleware.UserInfoForToken{
+func generateJwtToken(user *models.User) (string, error) {
+	return middleware.GenerateJwtToken(middleware.UserInfoForToken{
 		UserId: user.UserId,
 	})
 }
@@ -56,18 +58,17 @@ func (u *userRouter) signup(c *gin.Context) {
 	if err := c.Bind(&req); err != nil {
 		return
 	}
-	user := models.User{Name: req.Name, UserId: req.UserId}
 
+	user := models.User{Name: req.Name, UserId: req.UserId}
 	if err := user.Add(); err != nil {
 		c.JSON(403, err.Error())
 		return
 	}
+
 	c.JSON(200, user)
 }
 
 func (u *userRouter) me(c *gin.Context) {
-	userId, _ := middleware.GetAuthInfoByKey(c, "userId")
-	user := models.User{}
-	user.GetByUserId(userId.(string))
+	user := models.GetUserInfoInContext(c)
 	c.JSON(200, user)
 }
