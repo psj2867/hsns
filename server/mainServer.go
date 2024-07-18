@@ -10,12 +10,17 @@ import (
 
 func InitServer() *gin.Engine {
 	r := gin.Default()
-	r.Use(cors.Default())
+	r.Use(corsMiddleware())
 	r.Use(middleware.GlobalAuthMiddleware())
 	router.SetRouter(r)
 	return r
 }
-
+func corsMiddleware() gin.HandlerFunc {
+	config := cors.DefaultConfig()
+	config.AddAllowHeaders("*")
+	config.AllowAllOrigins = true
+	return cors.New(config)
+}
 func DeferServer(r *gin.Engine) {
 	config.DeferDb()
 }
