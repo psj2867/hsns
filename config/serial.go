@@ -10,7 +10,7 @@ import (
 
 type UploadToken struct {
 	data   map[string]interface{}
-	images []string
+	Images []string
 }
 type UploadTokenInfo struct {
 	Images   int
@@ -20,10 +20,10 @@ type UploadTokenInfo struct {
 
 func CreateUploadToken(info *UploadTokenInfo) *UploadToken {
 	m := UploadToken{data: map[string]interface{}{}}
-	m.images = util.GenerateN(gerateImageUuid, info.Images)
+	m.Images = util.GenerateN(gerateImageUuid, info.Images)
 	m.data["createAt"] = info.CreateAt
 	m.data["uuid"] = info.Uuid
-	m.data["images"] = m.images
+	m.data["imageUuids"] = m.Images
 	return &m
 }
 
@@ -42,7 +42,7 @@ func (t *UploadToken) Parse(data string) error {
 	if err != nil {
 		return err
 	}
-	t.images = t.data["images"].([]string)
+	t.Images = t.data["images"].([]string)
 	_ = t.data["uuid"].(string)
 	return nil
 }

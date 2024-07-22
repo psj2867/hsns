@@ -3,7 +3,7 @@ package main
 import "github.com/psj2867/hsns/server"
 
 func main() {
-	server.Run(":8080")
+	server.Run(":8000")
 	// f1()
 }
 

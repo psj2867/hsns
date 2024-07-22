@@ -40,9 +40,16 @@ func (t *contents) upload(c *gin.Context) {
 		return
 	}
 
-	uploadToken := config.CreateUploadToken(&config.UploadTokenInfo{}).String()
+	uploadToken := config.CreateUploadToken(&config.UploadTokenInfo{
+		Uuid:     contentsReuqest.Uuid,
+		Images:   ur.Images,
+		CreateAt: contentsReuqest.CreateAt,
+	})
 	c.Status(200)
-	c.Writer.WriteString(uploadToken)
+	c.JSON(200, map[string]any{
+		"uuids": uploadToken.Images,
+		"token": uploadToken.String(),
+	})
 }
 
 type uploadTokenRequest struct {
